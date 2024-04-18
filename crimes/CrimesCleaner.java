@@ -11,14 +11,28 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class CrimesCleaner {
     enum Counter {
-        ARREST_2021
+        REPORT_JAN,
+        REPORT_FEB,
+        REPORT_MAR,
+        REPORT_APR,
+        REPORT_MAY,
+        REPORT_JUN,
+        REPORT_JUL,
+        REPORT_AUG,
+        REPORT_SEP,
+        REPORT_OCT,
+        REPORT_NOV,
+        REPORT_DEC,
+        ARREST,
+        NO_ARREST,
+        INVALID_YEAR
     }
  
    public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
         Job job = Job.getInstance(conf, "CSV Filter");
         job.setJarByClass(CrimesCleaner.class);
-        job.setMapperClass(CrimesFilterMapper.class);
+        job.setMapperClass(CrimesMapper.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
         job.setNumReduceTasks(0);
