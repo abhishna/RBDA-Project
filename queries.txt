@@ -77,6 +77,49 @@ FIELDS TERMINATED BY ','
 LOCATION '/user/rm6416_nyu_edu/final_project/house_refactored/';
 
 
+5) Creating the Food Facility Inspection Table in Hive:
+
+CREATE EXTERNAL TABLE food_inspections_final (
+ facility_name STRING,
+facility_id STRING,
+facility_type STRING,
+facility_risk STRING,
+facility_city STRING,
+facility_zip INT,
+facility_result STRING
+)
+row format delimited fields terminated by ','
+location '/user/sc10670_nyu_edu/project/cleanup/outputfinal/';
+
+6) Aggregating the Necessary and Analysable Data from this Food Inspection Table using Presto:
+
+CREATE TABLE zipcode_inspection_summary AS
+SELECT
+    facility_zip AS Zipcode,
+    ROUND(SUM(CASE WHEN facility_result IN ('Pass', 'Pass w/ Conditions') THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS Pass_Percentage,
+    ROUND(AVG(CASE 
+                WHEN facility_risk = 'Risk 1 (High)' THEN 1
+                WHEN facility_risk = 'Risk 2 (Medium)' THEN 2
+                WHEN facility_risk = 'Risk 3 (Low)' THEN 3
+                ELSE 0 END), 2) AS Avg_Risk_Rank,
+    COUNT(*) AS Total_Inspected,
+    COUNT(DISTINCT facility_id) AS Unique_Facilities,
+    COUNT(DISTINCT CASE WHEN LOWER(facility_result) IN ('out of business', 'no entry') THEN facility_id ELSE NULL END) AS Out_Of_Business_Or_No_Entry,
+    (
+        SELECT facility_name
+        FROM food_inspections_final fi_sub
+        WHERE fi_sub.facility_zip = fi.facility_zip
+        GROUP BY facility_name
+        ORDER BY COUNT(facility_id) DESC
+        LIMIT 1
+    ) AS Most_Inspected_Facility
+FROM
+    food_inspections_final fi
+GROUP BY
+    facility_zip;
+
+
+
 --------- TABLEAU QUERIES -------
 
 1) Most common crime type per area
