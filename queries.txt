@@ -1,0 +1,161 @@
+Presto/Hive queries - 
+
+1) Creating the table from HDFS output for Crimes data
+
+CREATE EXTERNAL TABLE crimes_test (
+    zipcode INT,
+    month INT,
+    year INT,
+    type STRING,
+    arrest BOOLEAN
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/rm6416/crimes/crimes_refactored/';
+
+2) Aggregating the crimes data 
+
+SELECT 
+    zipcode,
+    month,
+    year,
+    crime_type,
+    COUNT(*) AS total_crimes,
+    SUM(CAST(arrest AS bigint)) AS total_arrests
+FROM 
+    crimes_test_2
+GROUP BY 
+    zipcode, month, year, crime_type
+ORDER BY 
+    zipcode, month, year, crime_type
+
+
+3) Creating Airbnb data in Hive -
+
+CREATE EXTERNAL TABLE IF NOT EXISTS airbnb_data (
+    listing_id INT,
+    month INT,
+    year INT,
+    price FLOAT,
+    host_since DATE,
+    host_response_time STRING,
+    host_response_rate STRING,
+    host_acceptance_rate STRING,
+    host_is_superhost STRING,
+    host_total_listings_count INT,
+    host_has_profile_pic STRING,
+    host_identity_verified STRING,
+    neighbourhood_cleansed STRING,
+    latitude FLOAT,
+    longitude FLOAT,
+    room_type STRING,
+    accommodates INT,
+    availability_30 INT,
+    availability_60 INT,
+    availability_90 INT,
+    availability_365 INT,
+    number_of_reviews INT,
+    review_scores_rating FLOAT,
+    zip_code INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/an3729_nyu_edu/airbnb_data/';
+
+
+4) Creating Zillow tables in Hive
+
+CREATE EXTERNAL TABLE IF NOT EXISTS zillow_houses (
+    zipcode INT,
+    month INT,
+    year INT,
+    price FLOAT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION '/user/rm6416_nyu_edu/final_project/house_refactored/';
+
+
+--------- TABLEAU QUERIES -------
+
+1) Most common crime type per area
+
+WITH crime_counts AS (
+    SELECT
+        zipcode,
+        year,
+        crime_type,
+        COUNT(*) AS crime_count,
+        RANK() OVER (PARTITION BY zipcode, year ORDER BY COUNT(*) DESC) AS crime_rank
+    FROM
+        crimes_summary
+    WHERE
+        year = <Parameters.year_param>
+    GROUP BY
+        zipcode, year, crime_type
+)
+SELECT
+    cs.zipcode,
+    cs.year,
+    SUM(cs.total_crimes) AS total_crimes,
+    MAX(cs.crime_type) AS most_common_crime_type
+FROM
+    crimes_summary cs
+JOIN
+    crime_counts cc
+ON
+    cs.zipcode = cc.zipcode
+    AND cs.year = cc.year
+    AND cs.crime_type = cc.crime_type
+WHERE
+    cs.year = <Parameters.year_param>
+    AND cc.crime_rank = 1
+GROUP BY
+    cs.zipcode, cs.year
+
+
+2) Crimes vs number of Airbnb reviews 
+
+SELECT
+    a.zip_code,
+    AVG(c.total_crimes) AS avg_crimes_per_zipcode,
+    AVG(a.number_of_reviews) AS avg_reviews_per_zipcode
+FROM
+    airbnb_data a
+INNER JOIN
+    crimes_summary c ON a.zip_code = c.zipcode
+GROUP BY
+    a.zip_code
+
+
+3) Relationship between crimes and accommodation prices
+
+SELECT 
+    c.zipcode,
+    c.month,
+    c.year,
+    AVG(c.total_crimes) AS avg_total_crimes,
+    AVG(a.price) AS avg_airbnb_price,
+    AVG(zr.price) AS avg_zillow_rental_price,
+    AVG(zh.price) AS avg_zillow_house_price
+FROM 
+    crimes_summary c
+LEFT JOIN 
+    airbnb_data a ON c.zipcode = a.zip_code
+                  AND c.month = a.month
+                  AND c.year = a.year
+LEFT JOIN 
+    zillow_rentals zr ON c.zipcode = zr.zipcode
+                      AND c.month = zr.month
+                      AND c.year = zr.year
+LEFT JOIN 
+    zillow_houses zh ON c.zipcode = zh.zipcode
+                     AND c.month = zh.month
+                     AND c.year = zh.year
+WHERE
+    c.month = <Parameters.month_param>
+    AND c.year = <Parameters.year_param>
+GROUP BY
+    c.zipcode, c.month, c.year
+
