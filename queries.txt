@@ -198,6 +198,41 @@ LEFT JOIN
                      AND c.year = zh.year
 WHERE
     c.month = <Parameters.month_param>
+
+4) Most common crime type per area
+
+WITH crime_counts AS (
+    SELECT
+        zipcode,
+        year,
+        crime_type,
+        COUNT(*) AS crime_count,
+        RANK() OVER (PARTITION BY zipcode, year ORDER BY COUNT(*) DESC) AS crime_rank
+    FROM
+        crimes_summary
+    WHERE
+        year = <Parameters.year_param>
+    GROUP BY
+        zipcode, year, crime_type
+)
+SELECT
+    cs.zipcode,
+    cs.year,
+    SUM(cs.total_crimes) AS total_crimes,
+    MAX(cs.crime_type) AS most_common_crime_type
+FROM
+    crimes_summary cs
+JOIN
+    crime_counts cc
+ON
+    cs.zipcode = cc.zipcode
+    AND cs.year = cc.year
+    AND cs.crime_type = cc.crime_type
+WHERE
+    cs.year = <Parameters.year_param>
+    AND cc.crime_rank = 1
+GROUP BY
+    cs.zipcode, cs.year;
     AND c.year = <Parameters.year_param>
 GROUP BY
     c.zipcode, c.month, c.year
