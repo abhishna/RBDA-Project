@@ -27,7 +27,7 @@ public class CrimesMapper extends Mapper<LongWritable, Text, NullWritable, Text>
     @Override
     public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
         String outputValue = "";
-        String keyValue = "";
+        String outputKey = "";
         String line = value.toString();
         String[] columns = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
         Counter jan = context.getCounter(CrimesCleaner.Counter.REPORT_JAN);
@@ -47,70 +47,96 @@ public class CrimesMapper extends Mapper<LongWritable, Text, NullWritable, Text>
         Counter no_arrest = context.getCounter(CrimesCleaner.Counter.NO_ARREST);
 
         Counter invalid_year = context.getCounter(CrimesCleaner.Counter.INVALID_YEAR);
+        Counter zipcode = context.getCounter(CrimesCleaner.Counter.NO_ZIPCODE);
+        Counter no_loc = context.getCounter(CrimesCleaner.Counter.MISSING_LOCATION);
 
         
 
-
+        // not going to write column headers for this now
         if(key.get()==0){
 
-            outputValue += columns[2] + "," + columns[5] + "," + columns[8] + "," + columns[17] + "," + columns[19] + "," + columns[20] + "\n";
-            context.write(NullWritable.get(), new Text(outputValue));
+            // outputValue += columns[2] + "," + columns[5] + "," + columns[8] + "," + columns[17] + "," + columns[19] + "," + columns[20] + "," + "Zipcode" + "\n";
+            // context.write(NullWritable.get(), new Text(outputValue));
         }
         else{
-            
-            outputValue += columns[2].substring(0,2) + "," + columns[5] + "," + columns[8] + "," + columns[17] + "," + columns[19] + "," + columns[20] + "\n";
 
-            primaryTypes.add(columns[5]);
-            if(columns[2].substring(0,2).equals("01")){
-                jan.increment(1);
+            if(columns[19].length() == 0 || columns[20].length() == 0) {
+                no_loc.increment(1);
             }
-            else if(columns[2].substring(0,2).equals("02")){
-                feb.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("03")){
-                mar.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("04")){
-                apr.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("05")){
-                may.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("06")){
-                jun.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("07")){
-                jul.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("08")){
-                aug.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("09")){
-                sep.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("10")){
-                oct.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("11")){
-                nov.increment(1);
-            }
-            else if(columns[2].substring(0,2).equals("12")){
-                dec.increment(1);
-            }
+
+            else {
+
+                System.out.println("String values of lat and long = " + columns[19] + ", " + columns[20]);
+
+                float lati = Float.parseFloat(columns[19]);
+                float longi = Float.parseFloat(columns[20]); 
     
-            if(columns[8].equals("true")) {
-                arrest.increment(1);
-            }
-            else if(columns[8].equals("false")) {
-                no_arrest.increment(1);
+                String nearestZipCode = ZipCodeData.findNearestZipCode(lati, longi);
+                
+                // outputKey += nearestZipCode + "," + columns[2].substring(0,2) + "," + columns[17];
+                // outputValue +=  columns[5] + "," + columns[8];
+
+                outputValue += nearestZipCode + "," + columns[2].substring(0,2) + "," + columns[17] + "," + columns[5] + "," + columns[8];
+                
+                if(nearestZipCode == null) {
+                    zipcode.increment(1);
+                }
+    
+                // outputValue += columns[2].substring(0,2) + "," + columns[5] + "," + columns[8] + "," + columns[17] + "," + columns[19] + "," + columns[20] + "," + nearestZipCode + "\n";
+    
+                primaryTypes.add(columns[5]);
+                if(columns[2].substring(0,2).equals("01")){
+                    jan.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("02")){
+                    feb.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("03")){
+                    mar.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("04")){
+                    apr.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("05")){
+                    may.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("06")){
+                    jun.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("07")){
+                    jul.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("08")){
+                    aug.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("09")){
+                    sep.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("10")){
+                    oct.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("11")){
+                    nov.increment(1);
+                }
+                else if(columns[2].substring(0,2).equals("12")){
+                    dec.increment(1);
+                }
+        
+                if(columns[8].equals("true")) {
+                    arrest.increment(1);
+                }
+                else if(columns[8].equals("false")) {
+                    no_arrest.increment(1);
+                }
+                
+                int int_year = Integer.parseInt(columns[17]);
+                if(int_year < 2001 || int_year > 2024) {
+                    invalid_year.increment(1);
+                }
+    
+                context.write(NullWritable.get(), new Text(outputValue));
             }
             
-            int int_year = Integer.parseInt(columns[17]);
-            if(int_year < 2001 || int_year > 2024) {
-                invalid_year.increment(1);
-            }
-
-            context.write(NullWritable.get(), new Text(outputValue));
         }
     }
 
