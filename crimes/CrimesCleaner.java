@@ -25,11 +25,14 @@ public class CrimesCleaner {
         REPORT_DEC,
         ARREST,
         NO_ARREST,
-        INVALID_YEAR
+        INVALID_YEAR,
+        NO_ZIPCODE,
+        MISSING_LOCATION
     }
  
    public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
+        conf.set("mapreduce.output.textoutputformat.separator", ",");
         Job job = Job.getInstance(conf, "CSV Filter");
         job.setJarByClass(CrimesCleaner.class);
         job.setMapperClass(CrimesMapper.class);
