@@ -294,3 +294,34 @@ GROUP BY
 GROUP BY
     c.zipcode, c.month, c.year
 
+5) Average airbnb prices monthly trend 
+
+SELECT 
+    CONCAT(CAST(airbnb_data.year AS VARCHAR), '-', LPAD(CAST(airbnb_data.month AS VARCHAR), 2, '0'), '-01') AS month_year,
+    airbnb_data.zip_code,
+    AVG(airbnb_data.availability_90) AS avg_availability_90
+FROM 
+    airbnb_data
+GROUP BY 
+    CONCAT(CAST(airbnb_data.year AS VARCHAR), '-', LPAD(CAST(airbnb_data.month AS VARCHAR), 2, '0'), '-01'),
+    airbnb_data.zip_code
+
+6) Distribution of Airbnb ratings
+
+SELECT  listing_id, zip_code, latitude, longitude,
+    CASE 
+        WHEN avg(review_scores_rating) >= 4.0 THEN 'Good'
+        WHEN avg(review_scores_rating) >= 2.5 THEN 'Moderate'
+        ELSE 'Bad'
+    END AS rating_category
+FROM 
+    airbnb_data group by listing_id, zip_code, longitude, latitude
+
+7) Average unit price per zip code vs availability 
+
+SELECT 
+    avg(airbnb_data.price / airbnb_data.accommodates) AS avg_unit_price,
+    zip_code, avg(availability_30) as avg_availability
+FROM 
+    airbnb_data group by zip_code
+
