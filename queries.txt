@@ -76,6 +76,63 @@ ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 LOCATION '/user/rm6416_nyu_edu/final_project/house_refactored/';
 
+5) Creating Traffic crashes table in Hive
+
+CREATE EXTERNAL TABLE IF NOT EXISTS traffic_crash_data (
+    zip_code INT,
+    month INT,
+    year INT,
+    num_crash INT,
+    num_injuries INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/jt4680_nyu_edu/traffic_crash_data/';
+
+6) Creating Taxi trips table in Hive
+
+CREATE EXTERNAL TABLE IF NOT EXISTS taxi_data (
+    zip_code INT,
+    month INT,
+    year INT,
+    company VARCHAR(40),
+    total_trips INT,
+    total_fare INT, 
+    total_miles INT,
+    avg_fare_per_mile INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/jt4680_nyu_edu/taxi_data/';
+
+7) Creating Aggrerated Taxi data table in Hive
+
+CREATE EXTERNAL TABLE IF NOT EXISTS taxi_data_aggregated (
+    zip_code INT,
+    month INT,
+    year INT,
+    total_trips INT,
+    total_fare INT, 
+    total_miles INT,
+    avg_fare_per_mile INT
+)
+AS
+SELECT 
+    zip_code,
+    month,
+    year,
+    SUM(total_trips) AS total_trips,
+    SUM(total_fare) AS total_fare,
+    SUM(total_miles) AS total_miles,
+    AVG(avg_fare_per_mile) AS avg_fare_per_mile
+FROM 
+    taxi_data
+GROUP BY 
+    zip_code,
+    month,
+    year;
 
 5) Creating the Food Facility Inspection Table in Hive:
 
